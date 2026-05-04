@@ -123,7 +123,7 @@ export function registerIpcHandlers(): void {
   })
 
   // ── Audio / Sidecar ───────────────────────────────────────
-  ipcMain.handle('audio:start', () => { sidecar.startRecording() })
+  ipcMain.handle('audio:start', () => { sidecar.startRecording(getSettings().language || 'auto') })
   ipcMain.handle('audio:stop', () => { sidecar.stopRecording() })
   ipcMain.handle('audio:status', () => sidecar.getState())
 

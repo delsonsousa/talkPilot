@@ -74,6 +74,7 @@ enum InboundCommand: String, Codable {
 
 struct CommandMessage: Codable {
     let command: InboundCommand
+    let language: String?
 }
 
 // MARK: - I/O helpers
@@ -106,9 +107,10 @@ func emitError(code: String, _ message: String) {
 }
 
 func emitTranscription(speaker: Speaker, text: String, isFinal: Bool) {
+    let normalizedText = normalizeTechnicalTerms(text)
     emit(TranscriptionMessage(
         speaker: speaker,
-        text: text,
+        text: normalizedText,
         timestamp: Date().timeIntervalSince1970,
         isFinal: isFinal
     ))
@@ -120,4 +122,33 @@ func emitLevels(you: Float, others: Float) {
 
 func emitModelStatus(_ phase: ModelDownloadPhase, reason: String? = nil) {
     emit(ModelStatusMessage(phase: phase, reason: reason))
+}
+
+private func normalizeTechnicalTerms(_ text: String) -> String {
+    var output = text
+    let folded = text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).lowercased()
+    let hasTechContext = [
+        "expo", "native", "react", "next", "javascript", "typescript",
+        "frontend", "mobile", "app", "framework", "biblioteca", "codigo", "código"
+    ].contains { folded.contains($0) }
+
+    guard hasTechContext else { return output }
+
+    output = output.replacingOccurrences(of: #"(?i)\bnext\s*(g|gs|js|j\s*s|g\s*s)\b"#, with: "Next.js", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\bnex\s*(g|gs|js|j\s*s|g\s*s)\b"#, with: "Next.js", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\bexpo\b"#, with: "Expo", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\breact\s+native\b"#, with: "React Native", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\breact\b"#, with: "React", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\breatores?\b"#, with: "React", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\breactores?\b"#, with: "React", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\bExpo\s+e\s+(o\s+)?V\b"#, with: "Expo e React Native", options: .regularExpression)
+    output = output.replacingOccurrences(of: #"(?i)\b(o\s+)?V\s+e\s+(o\s+)?Expo\b"#, with: "React Native e Expo", options: .regularExpression)
+
+    let foldedOutput = output.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).lowercased()
+    if foldedOutput.contains("expo"), foldedOutput.contains("react"), !foldedOutput.contains("native") {
+        output = output.replacingOccurrences(of: #"(?i)\bReact\s+e\s+(o\s+)?Expo\b"#, with: "React Native e Expo", options: .regularExpression)
+        output = output.replacingOccurrences(of: #"(?i)\bExpo\s+e\s+(o\s+)?React\b"#, with: "Expo e React Native", options: .regularExpression)
+    }
+
+    return output
 }

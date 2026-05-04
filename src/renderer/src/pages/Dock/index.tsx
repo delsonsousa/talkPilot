@@ -30,23 +30,23 @@ export default function DockPage(): JSX.Element {
   return (
     <div className="h-screen w-screen bg-transparent text-white select-none">
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="flex h-[58px] items-center gap-3 rounded-[18px] border border-white/[0.08] bg-[#171923]/88 px-3 shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-          <div className="drag-region grid h-10 w-7 place-items-center rounded-lg text-white/35 hover:text-white/70">
+        <div className="flex h-[48px] items-center gap-2 rounded-[16px] border border-white/[0.08] bg-[rgba(0,0,0,0.94)] px-2.5 shadow-[0_12px_30px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.045)] backdrop-blur-xl">
+          <div className="drag-region grid h-9 w-7 place-items-center rounded-lg text-white/35 hover:text-white/70">
             <GripVertical size={16} />
           </div>
 
-          <button className="no-drag grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/10 text-white shadow-inner shadow-white/5 hover:bg-white/15">
+          <button className="no-drag grid h-9 w-9 place-items-center rounded-full bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.17]">
             <Home size={17} />
           </button>
 
-          <div className="h-8 w-px bg-white/10" />
+          <div className="h-6 w-px bg-white/[0.1]" />
 
           <button
             onClick={toggleListening}
             title={isRecording ? 'Parar' : 'Começar a ouvir'}
-            className={`no-drag grid h-11 w-12 place-items-center rounded-xl shadow-[0_6px_16px_rgba(0,0,0,0.26)] transition ${
+            className={`no-drag grid h-9 w-12 place-items-center rounded-[12px] transition ${
               isRecording
-                ? 'border border-red-400/50 bg-red-500/18 text-red-200 hover:bg-red-500/25'
+                ? 'border border-red-400/50 bg-red-500/[0.12] text-red-100 hover:bg-red-500/[0.18]'
                 : 'border border-blue-300/40 bg-blue-500 text-white hover:bg-blue-400'
             }`}
           >

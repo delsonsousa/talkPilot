@@ -11,6 +11,69 @@ export interface AnalysisLine {
   text: string
 }
 
+type DetectedLanguage = 'pt' | 'en'
+
+function normalizeForLanguageDetection(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+}
+
+function languageScore(text: string): Record<DetectedLanguage, number> {
+  const normalized = normalizeForLanguageDetection(text)
+  const wrapped = ` ${normalized} `
+  let pt = 0
+  let en = 0
+
+  const portugueseMarkers = [
+    ' o que ', ' qual ', ' quais ', ' quando ', ' como ', ' por que ', ' porque ',
+    ' onde ', ' quem ', ' voce ', ' diferenca ', ' entre ', ' me explica ',
+    ' fala pra mim ', ' portugues ', ' preciso ', ' quero ', ' saber '
+  ]
+  const englishMarkers = [
+    ' what ', ' which ', ' when ', ' how ', ' why ', ' where ', ' who ',
+    ' can you ', ' could you ', ' would you ', ' do you ', ' listen ',
+    ' help ', ' difference ', ' between ', ' explain ', ' speak english ',
+    ' speak portuguese ', ' you speak ', ' tell me ', ' i want '
+  ]
+
+  for (const marker of portugueseMarkers) if (wrapped.includes(marker)) pt += 2
+  for (const marker of englishMarkers) if (wrapped.includes(marker)) en += 2
+
+  if (/[ãõçáéíóúâêôà]/i.test(text)) pt += 3
+  if (/\b(the|is|are|for|with|to|me|you|your|my|i)\b/i.test(text)) en += 1
+  if (/\b(que|de|da|do|em|para|voce|você|eu)\b/i.test(text)) pt += 1
+
+  return { pt, en }
+}
+
+function detectConversationLanguage(lines: AnalysisLine[]): DetectedLanguage {
+  const recentYouLines = lines
+    .filter((line) => line.speaker === 'YOU')
+    .slice(-4)
+
+  const latestYouLine = recentYouLines.at(-1)?.text.trim()
+  if (latestYouLine) {
+    const latestScore = languageScore(latestYouLine)
+    if (latestScore.en > latestScore.pt) return 'en'
+    if (latestScore.pt > latestScore.en) return 'pt'
+  }
+
+  const recentText = (recentYouLines.length > 0 ? recentYouLines : lines.slice(-6))
+    .map((line, index, arr) => `${' '.repeat(index === arr.length - 1 ? 3 : 1)}${line.text}`)
+    .join(' ')
+  const score = languageScore(recentText)
+
+  return score.en > score.pt ? 'en' : 'pt'
+}
+
+function languageInstruction(language: DetectedLanguage): string {
+  return language === 'pt'
+    ? 'IDIOMA OBRIGATORIO: responda somente em Portugues do Brasil. Ignore idiomas anteriores no historico.'
+    : 'REQUIRED LANGUAGE: reply only in English. Ignore previous Portuguese in the transcript.'
+}
+
 function buildModel() {
   const settings = getSettings()
   const provider = settings.llmProvider
@@ -110,22 +173,18 @@ function friendlyModelError(err: unknown): string {
   return message
 }
 
-function buildSummaryPrompt(transcript: string): string {
-  return `Você é um assistente de reuniões. Analise a transcrição abaixo e gere um resumo estruturado. Responda no mesmo idioma da conversa.
+function buildSummaryPrompt(transcript: string, language: DetectedLanguage): string {
+  return `Você é um assistente de reuniões. Analise a transcrição e gere um resumo ultra objetivo.
+${languageInstruction(language)}
 
 TRANSCRIÇÃO:
 ${transcript}
 
-Gere o seguinte (use markdown com negrito para os títulos):
-
-**Resumo**
-- [3-5 bullet points dos principais pontos discutidos]
-
-**Decisões**
-- [o que foi decidido — escreva "Nenhuma decisão registrada" se não houver]
-
-**Próximos passos**
-- [ações concretas identificadas, com responsável se mencionado — escreva "Nenhum" se não houver]`
+Formato obrigatorio:
+- Maximo 6 bullets no total.
+- Cada bullet com no maximo 18 palavras.
+- Inclua decisoes/proximos passos apenas se existirem.
+- Sem introducao, sem detalhes secundarios e sem repetir a transcricao.`
 }
 
 export async function analyzeTranscript(
@@ -148,14 +207,15 @@ export async function analyzeTranscript(
 
   let prompt: string
   if (mode === 'summarize') {
-    prompt = buildSummaryPrompt(transcript)
+    prompt = buildSummaryPrompt(transcript, detectConversationLanguage(lines))
   } else {
     const settings = getSettings()
     const profile = getProfile(settings.activeProfile)
-    prompt = profile.buildPrompt(transcript)
+    const instruction = languageInstruction(detectConversationLanguage(lines))
+    prompt = `${instruction}\n\n${profile.buildPrompt(transcript)}\n\n${instruction}`
   }
 
-  const maxTokens = mode === 'summarize' ? 700 : 400
+  const maxTokens = mode === 'summarize' ? 360 : 180
 
   try {
     const result = await streamText({ model, prompt, maxOutputTokens: maxTokens, abortSignal: signal })

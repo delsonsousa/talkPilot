@@ -25,7 +25,7 @@ const defaults: AppSettings = {
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3.2',
   inputDevice: 'default',
-  language: 'pt-BR',
+  language: 'auto',
   activeProfile: 'generic',
   hotkeys: {
     toggleProtection: 'CommandOrControl+Shift+P',
@@ -35,7 +35,7 @@ const defaults: AppSettings = {
   },
   contentProtectionDefault: true,
   onboardingCompleted: false,
-  settingsVersion: 2
+  settingsVersion: 3
 }
 
 export const store = new Store<AppSettings>({ defaults })
@@ -55,10 +55,14 @@ export function resetSettings(): void {
 
 function migrateSettings(): void {
   const current = store.store
-  if ((current.settingsVersion ?? 1) >= 2) return
+  if ((current.settingsVersion ?? 1) >= 3) return
 
-  store.set('llmProvider', 'ollama')
-  store.set('ollamaBaseUrl', current.ollamaBaseUrl || defaults.ollamaBaseUrl)
-  store.set('ollamaModel', current.ollamaModel || defaults.ollamaModel)
-  store.set('settingsVersion', 2)
+  if ((current.settingsVersion ?? 1) < 2) {
+    store.set('llmProvider', 'ollama')
+    store.set('ollamaBaseUrl', current.ollamaBaseUrl || defaults.ollamaBaseUrl)
+    store.set('ollamaModel', current.ollamaModel || defaults.ollamaModel)
+  }
+
+  store.set('language', current.language || defaults.language)
+  store.set('settingsVersion', 3)
 }

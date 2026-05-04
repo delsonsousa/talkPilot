@@ -32,14 +32,14 @@ func emitOnDeviceStatus() {
 
 // MARK: - Start / Stop
 
-func startCapture() async {
+func startCapture(language: String = "auto") async {
     guard !isRecording else {
         fputs("[sidecar] startCapture: already recording, ignoring\n", stderr)
         return
     }
     // Set flag BEFORE any suspension point to prevent concurrent calls from re-entering.
     isRecording = true
-    fputs("[sidecar] startCapture: begin\n", stderr)
+    fputs("[sidecar] startCapture: begin language=\(language)\n", stderr)
 
     // 1. Speech Recognition permission
     let speechOK = await Transcriber.requestAuthorization()
@@ -72,8 +72,8 @@ func startCapture() async {
     systemAudio.onBuffer = { othersSpeechWorker.append($0) }
     systemAudio.onLevel  = { level in othersLevel = level }
 
-    youSpeechWorker.start()
-    othersSpeechWorker.start()
+    youSpeechWorker.start(language: language)
+    othersSpeechWorker.start(language: language)
 
     // 4. Start mic capture
     do {
@@ -162,7 +162,7 @@ func readCommands() {
 
         switch cmd.command {
         case .start:
-            Task { await startCapture() }
+            Task { await startCapture(language: cmd.language ?? "auto") }
         case .stop:
             Task { await stopCapture() }
         case .ping:
@@ -176,7 +176,8 @@ func readCommands() {
 if CommandLine.arguments.count >= 3,
    CommandLine.arguments[1] == "--speech-worker",
    let speaker = Speaker(rawValue: CommandLine.arguments[2]) {
-    runSpeechWorker(speaker: speaker)
+    let language = CommandLine.arguments.count >= 4 ? CommandLine.arguments[3] : "auto"
+    runSpeechWorker(speaker: speaker, language: language)
 } else {
     emitStatus(.ready)
 

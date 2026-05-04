@@ -23,7 +23,7 @@ final class SpeechWorkerClient {
         self.writeQueue = DispatchQueue(label: "talkpilot.speech-worker.\(speaker.rawValue)")
     }
 
-    func start() {
+    func start(language: String = "auto") {
         guard process == nil else { return }
 
         let child = Process()
@@ -32,7 +32,7 @@ final class SpeechWorkerClient {
         let stderrPipe = Pipe()
 
         child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
-        child.arguments = ["--speech-worker", speaker.rawValue]
+        child.arguments = ["--speech-worker", speaker.rawValue, language]
         child.standardInput = stdinPipe
         child.standardOutput = stdoutPipe
         child.standardError = stderrPipe
@@ -91,8 +91,8 @@ final class SpeechWorkerClient {
     }
 }
 
-func runSpeechWorker(speaker: Speaker) {
-    let transcriber = Transcriber(speaker: speaker)
+func runSpeechWorker(speaker: Speaker, language: String) {
+    let transcriber = Transcriber(speaker: speaker, languageMode: language)
     let voiceGate = VoiceGate(speaker: speaker, transcriber: transcriber)
 
     Task {
@@ -159,7 +159,7 @@ private final class VoiceGate {
 
         rememberPreRoll(buffer)
 
-        if transcriber.isRunning {
+        if transcriber.isAcceptingAudio {
             transcriber.append(buffer)
 
             if rms < stopThreshold {
@@ -175,6 +175,8 @@ private final class VoiceGate {
 
             return
         }
+
+        if transcriber.isRunning { return }
 
         guard rms >= startThreshold else { return }
 

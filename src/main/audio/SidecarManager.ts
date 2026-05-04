@@ -136,10 +136,10 @@ export class SidecarManager extends EventEmitter {
     }
   }
 
-  startRecording(): void {
+  startRecording(language = 'auto'): void {
     if (!this.process) this.start()
     this.restartAttempts = 0
-    setTimeout(() => this.sendCommand('start'), 100)
+    setTimeout(() => this.sendCommand('start', { language }), 100)
   }
 
   stopRecording(): void {
@@ -154,9 +154,9 @@ export class SidecarManager extends EventEmitter {
     return this.state
   }
 
-  private sendCommand(command: string): void {
+  private sendCommand(command: string, payload: Record<string, unknown> = {}): void {
     if (!this.process?.stdin) return
-    const msg = JSON.stringify({ command }) + '\n'
+    const msg = JSON.stringify({ command, ...payload }) + '\n'
     this.process.stdin.write(msg)
   }
 
