@@ -19,6 +19,8 @@ const conciseRules = `Regras de resposta:
 - Use bullets somente se houver varios pontos claros; no maximo 2 bullets.
 - Cada bullet deve ter no maximo 16 palavras.
 - Nao invente empresa, numeros, cargos ou experiencias que nao aparecem na transcricao.
+- Nunca invente expansoes de siglas. Para siglas conhecidas, use apenas o glossario abaixo.
+- Se a pergunta comparar SSG, SSR ou ISR, defina cada uma exatamente pelo glossario.
 - Glossario obrigatorio — use SEMPRE estas definicoes ao ver estas siglas:
   SSG = Static Site Generation (paginas geradas no build, sem servidor)
   SSR = Server-Side Rendering (geradas no servidor a cada requisicao)
@@ -73,6 +75,12 @@ Response rules:
 - Use bullets only for multiple clear points; maximum 2 bullets.
 - Each bullet must be 16 words or fewer.
 - Do not invent companies, numbers, titles, or experience not present in the transcript.
+- Never invent acronym expansions. For known acronyms, use only this glossary:
+  SSG = Static Site Generation
+  SSR = Server-Side Rendering
+  ISR = Incremental Static Regeneration
+  CSR = Client-Side Rendering
+  RSC = React Server Components
 - Preserve technical names exactly: React, React Native, Expo, Next.js, JavaScript.
 - If the transcript says "reator" near Expo/React, treat it as React Native.
 - No EU/OUTRO labels, no intro, "I would say", heavy markdown, or transcript repetition.
@@ -108,6 +116,12 @@ Response rules:
 - Prefer one short paragraph or up to 2 bullets.
 - Each bullet must be 16 words or fewer.
 - Do not invent details not present in the transcript.
+- Never invent acronym expansions. For known acronyms, use only this glossary:
+  SSG = Static Site Generation
+  SSR = Server-Side Rendering
+  ISR = Incremental Static Regeneration
+  CSR = Client-Side Rendering
+  RSC = React Server Components
 - Preserve technical names exactly: React, React Native, Expo, Next.js, JavaScript.
 - If the transcript says "reator" near Expo/React, treat it as React Native.
 - No EU/OUTRO labels, no intro, heavy markdown, or transcript repetition.

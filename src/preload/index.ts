@@ -27,7 +27,9 @@ const api = {
     openTranscript: () => ipcRenderer.invoke('window:open-transcript'),
     openAssistant: () => ipcRenderer.invoke('window:open-assistant'),
     minimizeCurrent: () => ipcRenderer.invoke('window:minimize-current'),
-    resizeSuggestion: (height: number) => ipcRenderer.invoke('window:resize-suggestion', height)
+    resizeSuggestion: (height: number) => ipcRenderer.invoke('window:resize-suggestion', height),
+    toggleProtection: (): Promise<boolean> => ipcRenderer.invoke('window:toggle-protection'),
+    getProtectionState: (): Promise<boolean> => ipcRenderer.invoke('window:get-protection-state')
   },
 
   audio: {

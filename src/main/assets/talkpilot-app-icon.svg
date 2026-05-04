@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="TalkPilot app icon">
+  <rect width="1024" height="1024" rx="224" fill="#080909"/>
+
+  <g transform="translate(0 12)">
+    <path
+      d="M512 276c-70 0-128 58-128 128v132c0 70 58 128 128 128s128-58 128-128V404c0-70-58-128-128-128Zm0 28c55 0 100 45 100 100v132c0 55-45 100-100 100s-100-45-100-100V404c0-55 45-100 100-100Z"
+      fill="#ffffff"
+    />
+    <path
+      d="M364 510c0 108 52 171 148 171s148-63 148-171"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="28"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M512 681v64"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="28"
+      stroke-linecap="round"
+    />
+
+    <rect x="500" y="354" width="24" height="184" rx="12" fill="#00F0A8"/>
+    <rect x="464" y="398" width="24" height="96" rx="12" fill="#00F0A8"/>
+    <rect x="536" y="386" width="24" height="120" rx="12" fill="#00F0A8"/>
+  </g>
+</svg>

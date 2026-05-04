@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   ClipboardList,
   FileText,
+  Globe2,
+  Languages,
   Loader2,
   MessageSquare,
   Mic,
@@ -29,6 +32,18 @@ interface TranscriptLine {
 }
 
 type ModelPhase = 'downloading' | 'ready' | 'failed' | null
+type LanguageValue = 'auto' | 'pt-BR' | 'en-US'
+
+const LANGUAGE_OPTIONS: Array<{
+  value: LanguageValue
+  label: string
+  detail: string
+  flag: string
+}> = [
+  { value: 'auto', label: 'Auto', detail: 'PT + EN', flag: '🌐' },
+  { value: 'pt-BR', label: 'Português', detail: 'Brasil', flag: '🇧🇷' },
+  { value: 'en-US', label: 'English', detail: 'US', flag: '🇺🇸' }
+]
 
 let lineId = 0
 type Speaker = TranscriptLine['speaker']
@@ -52,6 +67,8 @@ export default function OverlayPage(): JSX.Element {
   const [assistantEnabled, setAssistantEnabled] = useState(false)
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds]   = useState(0)
+  const [language, setLanguage]               = useState<LanguageValue>('auto')
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false)
 
   const scrollRef   = useRef<HTMLDivElement>(null)
   const activeLineIdsRef = useRef<Record<Speaker, number | null>>({ YOU: null, OTHERS: null })
@@ -142,8 +159,15 @@ export default function OverlayPage(): JSX.Element {
     ]
     window.api.audio.getSession().then(applySession)
     window.api.assistant.getEnabled().then(setAssistantEnabled)
+    window.api.settings.getAll().then((settings) => {
+      setLanguage(normalizeLanguage(settings.language))
+    })
     return () => unsubs.forEach((u) => u())
   }, [])
+
+  useEffect(() => {
+    if (isRecording) setShowLanguageMenu(false)
+  }, [isRecording])
 
   useEffect(() => {
     if (!recordingStartedAt) {
@@ -209,6 +233,12 @@ export default function OverlayPage(): JSX.Element {
     await window.api.audio.setDevice(uid)
   }
 
+  async function selectLanguage(value: LanguageValue): Promise<void> {
+    setLanguage(value)
+    setShowLanguageMenu(false)
+    await window.api.settings.set('language', value)
+  }
+
   async function toggleMute(): Promise<void> {
     const next = !isMuted
     setIsMuted(next)
@@ -233,6 +263,7 @@ export default function OverlayPage(): JSX.Element {
   }
 
   const finalLineCount = lines.filter((l) => l.isFinal).length
+  const selectedLanguage = LANGUAGE_OPTIONS.find((option) => option.value === language) ?? LANGUAGE_OPTIONS[0]
 
   return (
     <div className="drag-region h-screen flex flex-col rounded-[14px] border border-white/[0.09] bg-[rgba(2,3,6,0.975)] text-white select-none overflow-hidden shadow-[0_18px_48px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.045)]">
@@ -311,7 +342,7 @@ export default function OverlayPage(): JSX.Element {
             <p className="text-xs text-white/35 text-center leading-relaxed">
               {isRecording
                 ? 'Ouvindo… fale normalmente'
-                : (isMonitoring ? 'Monitorando níveis de áudio' : 'Clique em Iniciar para começar a transcrição')}
+                : (isMonitoring ? 'Monitorando níveis de áudio' : 'Escolha o idioma e inicie pela barra inferior')}
             </p>
           </div>
         )}
@@ -467,16 +498,51 @@ export default function OverlayPage(): JSX.Element {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 rounded-full border border-white/[0.09] bg-black/50 p-1.5">
-          <button
-            onClick={toggleRecording}
-            className={`flex h-9 min-w-[144px] items-center justify-center gap-2 rounded-full px-4 text-sm font-medium tabular-nums transition ${
-              isRecording
-                ? 'border border-red-400/50 bg-red-500/[0.12] text-red-100 hover:bg-red-500/[0.18]'
-                : 'border border-emerald-400/40 bg-emerald-500/[0.14] text-emerald-100 hover:bg-emerald-500/[0.2]'
-            }`}
-          >
-            {isRecording ? <><Square size={14} />Parar {formatElapsed(elapsedSeconds)}</> : <><Mic size={14} />Iniciar</>}
-          </button>
+          {isRecording ? (
+            <button
+              onClick={toggleRecording}
+              className="flex h-9 min-w-[144px] items-center justify-center gap-2 rounded-full border border-red-400/50 bg-red-500/[0.12] px-4 text-sm font-medium tabular-nums text-red-100 transition hover:bg-red-500/[0.18]"
+            >
+              <Square size={14} />
+              Parar {formatElapsed(elapsedSeconds)}
+            </button>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={() => setShowLanguageMenu((value) => !value)}
+                className="flex h-9 min-w-[178px] items-center justify-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.055] px-3.5 text-xs font-medium text-white/85 transition hover:bg-white/[0.085] hover:text-white"
+              >
+                <Languages size={14} className="text-emerald-300/85" />
+                <span className="text-sm leading-none">{selectedLanguage.flag}</span>
+                <span>{selectedLanguage.label}</span>
+                <span className="text-[10px] font-medium text-white/35">{selectedLanguage.detail}</span>
+                <ChevronDown size={12} className={`text-white/40 transition ${showLanguageMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showLanguageMenu && (
+                <div className="absolute bottom-full left-0 z-20 mb-2 w-[218px] overflow-hidden rounded-xl border border-white/[0.1] bg-[rgba(10,12,18,0.98)] p-1 shadow-[0_16px_36px_rgba(0,0,0,0.42)]">
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => selectLanguage(option.value)}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-white/[0.07] ${
+                        language === option.value ? 'text-white' : 'text-white/55'
+                      }`}
+                    >
+                      <span className="grid h-6 w-6 place-items-center rounded-md bg-white/[0.06] text-sm">
+                        {option.value === 'auto' ? <Globe2 size={14} className="text-emerald-300/85" /> : option.flag}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-medium">{option.label}</span>
+                        <span className="block text-[10px] text-white/35">{option.detail}</span>
+                      </span>
+                      {language === option.value && <Check size={13} className="text-emerald-300" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {finalLineCount > 0 && (
             <>
@@ -514,4 +580,9 @@ function formatElapsed(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+function normalizeLanguage(value: string | null | undefined): LanguageValue {
+  if (value === 'pt-BR' || value === 'en-US') return value
+  return 'auto'
 }

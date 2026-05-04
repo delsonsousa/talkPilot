@@ -74,6 +74,14 @@ export class SidecarManager extends EventEmitter {
       env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined }
     })
 
+    this.process.stdin?.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EPIPE' || error.code === 'ERR_STREAM_DESTROYED') {
+        if (!this.isStopping) console.warn('[audio] sidecar stdin closed')
+        return
+      }
+      console.error('[audio] sidecar stdin error:', error)
+    })
+
     this.process.stdout?.setEncoding('utf8')
     this.process.stdout?.on('data', (chunk: string) => {
       if (this.isStopping) return
@@ -180,9 +188,21 @@ export class SidecarManager extends EventEmitter {
   }
 
   private sendCommand(command: string, payload: Record<string, unknown> = {}): void {
-    if (!this.process?.stdin) return
+    const stdin = this.process?.stdin
+    if (!stdin || stdin.destroyed || !stdin.writable) return
     const msg = JSON.stringify({ command, ...payload }) + '\n'
-    this.process.stdin.write(msg)
+    try {
+      stdin.write(msg, (error) => {
+        if (!error) return
+        const code = (error as NodeJS.ErrnoException).code
+        if (code === 'EPIPE' || code === 'ERR_STREAM_DESTROYED') return
+        console.error('[audio] failed to write sidecar command:', error)
+      })
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === 'EPIPE' || code === 'ERR_STREAM_DESTROYED') return
+      throw error
+    }
   }
 
   private handleMessage(line: string): void {

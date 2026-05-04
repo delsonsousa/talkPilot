@@ -13,6 +13,8 @@ let openAssistantFn: (() => void) | null = null
 let hideAssistantFn: (() => void) | null = null
 let closeSessionWindowsFn: (() => void) | null = null
 let resizeSuggestionWindowFn: ((height: number) => void) | null = null
+let toggleProtectionFn: (() => boolean) | null = null
+let getProtectionStateFn: (() => boolean) | null = null
 let settingsWindowRef: (() => BrowserWindow | null) | null = null
 let mainWindowContents: (() => WebContents | null) | null = null
 let transcriptWindowContents: (() => WebContents | null) | null = null
@@ -24,6 +26,8 @@ export function setOpenAssistant(fn: () => void): void { openAssistantFn = fn }
 export function setHideAssistant(fn: () => void): void { hideAssistantFn = fn }
 export function setCloseSessionWindows(fn: () => void): void { closeSessionWindowsFn = fn }
 export function setResizeSuggestionWindow(fn: (height: number) => void): void { resizeSuggestionWindowFn = fn }
+export function setToggleProtection(fn: () => boolean): void { toggleProtectionFn = fn }
+export function setGetProtectionState(fn: () => boolean): void { getProtectionStateFn = fn }
 export function setSettingsWindowRef(getter: () => BrowserWindow | null): void { settingsWindowRef = getter }
 export function setMainWindowContents(getter: () => WebContents | null): void { mainWindowContents = getter }
 export function setTranscriptWindowContents(getter: () => WebContents | null): void { transcriptWindowContents = getter }
@@ -173,6 +177,8 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('window:resize-suggestion', (_event, height: number) => {
     resizeSuggestionWindowFn?.(height)
   })
+  ipcMain.handle('window:toggle-protection', () => toggleProtectionFn?.() ?? false)
+  ipcMain.handle('window:get-protection-state', () => getProtectionStateFn?.() ?? true)
 
   ipcMain.handle('window:close-settings', () => {
     const win = settingsWindowRef?.()

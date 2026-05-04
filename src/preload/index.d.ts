@@ -67,6 +67,8 @@ declare global {
         openAssistant: () => Promise<void>
         minimizeCurrent: () => Promise<void>
         resizeSuggestion: (height: number) => Promise<void>
+        toggleProtection: () => Promise<boolean>
+        getProtectionState: () => Promise<boolean>
       }
 
       audio: {

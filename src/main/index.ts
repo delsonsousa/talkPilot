@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, WebContents } from 'electron'
+import { app, BrowserWindow, globalShortcut, Menu, nativeImage, Tray, WebContents } from 'electron'
 import { createStealthWindow } from './window/StealthWindow'
 import { createSettingsWindow } from './window/SettingsWindow'
 import { createSuggestionWindow } from './window/SuggestionWindow'
@@ -16,15 +16,23 @@ import {
   setSuggestionWindowContents,
   setTranscriptWindowContents,
   setResizeSuggestionWindow,
+  setToggleProtection,
+  setGetProtectionState,
   finishSession
 } from './ipc/handlers'
 import { getSettings } from './store/settings'
 import { sidecar } from './audio/SidecarManager'
+import trayIconPath from './assets/talkpilot-menubar.png?asset'
+import trayIcon2xPath from './assets/talkpilot-menubar@2x.png?asset'
+import appIconSvg from './assets/talkpilot-app-icon.svg?raw'
+import { existsSync } from 'fs'
+import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
 let suggestionWindow: BrowserWindow | null = null
 let transcriptWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 let protectionOn = true
 let isProcessExiting = false
 
@@ -92,9 +100,112 @@ function resizeSuggestionWindow(height: number): void {
   suggestionWindow.setBounds({ ...current, height: nextHeight }, true)
 }
 
+function applyProtectionState(): void {
+  mainWindow?.setContentProtection(protectionOn)
+  transcriptWindow?.setContentProtection(protectionOn)
+  suggestionWindow?.setContentProtection(protectionOn)
+  getWindowContents(mainWindow)?.send('protection:state', protectionOn)
+  getWindowContents(transcriptWindow)?.send('protection:state', protectionOn)
+  getWindowContents(suggestionWindow)?.send('protection:state', protectionOn)
+}
+
+function toggleProtection(): boolean {
+  protectionOn = !protectionOn
+  applyProtectionState()
+  console.log(`[stealth] protection ${protectionOn ? 'ON' : 'OFF'}`)
+  return protectionOn
+}
+
+function startTranscription(): void {
+  openTranscript()
+  setAssistantEnabled(true)
+  sidecar.startRecording()
+  console.log('[audio] started recording')
+}
+
+function toggleTranscription(): void {
+  if (sidecar.getState() === 'recording') {
+    finishSession()
+    console.log('[audio] stopped recording')
+    return
+  }
+
+  startTranscription()
+}
+
+function toggleTopBar(): void {
+  if (mainWindow?.isVisible()) {
+    mainWindow.hide()
+  } else {
+    mainWindow?.show()
+  }
+  updateTrayMenu()
+}
+
+function createTrayIcon(): Electron.NativeImage {
+  const devDir = join(app.getAppPath(), 'src/main/assets')
+  const dev1x = join(devDir, 'talkpilot-menubar.png')
+  const dev2x = join(devDir, 'talkpilot-menubar@2x.png')
+
+  const path1x = existsSync(dev1x) ? dev1x : trayIconPath
+  const path2x = existsSync(dev2x) ? dev2x : trayIcon2xPath
+
+  const image = nativeImage.createFromPath(path1x)
+  if (image.isEmpty()) return nativeImage.createEmpty()
+
+  const buf2x = require('fs').readFileSync(path2x)
+  image.addRepresentation({ scaleFactor: 2, buffer: buf2x })
+
+  image.setTemplateImage(true)
+  return image
+}
+
+function createAppIcon(): Electron.NativeImage {
+  return nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(appIconSvg).toString('base64')}`)
+}
+
+function updateTrayMenu(): void {
+  if (!tray) return
+  const isRecording = sidecar.getState() === 'recording'
+  const isTopBarVisible = mainWindow?.isVisible() ?? false
+  const menu = Menu.buildFromTemplate([
+    {
+      label: isRecording ? 'Stop Transcription' : 'Start Transcription',
+      click: toggleTranscription
+    },
+    {
+      label: isTopBarVisible ? 'Hide Top Bar' : 'Show Top Bar',
+      click: toggleTopBar
+    },
+    { type: 'separator' },
+    {
+      label: 'Settings',
+      click: openSettings
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => app.quit()
+    }
+  ])
+  tray.setContextMenu(menu)
+  tray.setToolTip('TalkPilot')
+}
+
+function createMenuBarTray(): void {
+  const icon = createTrayIcon()
+  tray = new Tray(icon)
+  tray.setTitle('')
+  updateTrayMenu()
+  tray.on('click', () => tray?.popUpContextMenu())
+  console.log('[tray] menu bar item created')
+}
+
 app.whenReady().then(() => {
   const settings = getSettings()
   protectionOn = settings.contentProtectionDefault
+  const appIcon = createAppIcon()
+  if (!appIcon.isEmpty()) app.dock?.setIcon(appIcon)
 
   registerIpcHandlers()
   setSettingsWindowRef(getSettingsWindow)
@@ -104,35 +215,31 @@ app.whenReady().then(() => {
   setHideAssistant(hideAssistant)
   setCloseSessionWindows(closeSessionWindows)
   setResizeSuggestionWindow(resizeSuggestionWindow)
+  setToggleProtection(toggleProtection)
+  setGetProtectionState(() => protectionOn)
   setMainWindowContents(() => getWindowContents(mainWindow))
   setTranscriptWindowContents(() => getWindowContents(transcriptWindow))
 
   mainWindow = createStealthWindow()
   mainWindow.setContentProtection(protectionOn)
+  mainWindow.on('show', updateTrayMenu)
+  mainWindow.on('hide', updateTrayMenu)
 
   setSuggestionWindowContents(() => getWindowContents(suggestionWindow))
 
   // Start the sidecar process on launch (not recording yet — waits for audio:start)
   sidecar.start()
+  createMenuBarTray()
+  sidecar.on('status', updateTrayMenu)
 
   // ⌘⇧P — toggle content protection
   globalShortcut.register(settings.hotkeys.toggleProtection, () => {
-    protectionOn = !protectionOn
-    mainWindow?.setContentProtection(protectionOn)
-    transcriptWindow?.setContentProtection(protectionOn)
-    suggestionWindow?.setContentProtection(protectionOn)
-    getWindowContents(mainWindow)?.send('protection:state', protectionOn)
-    getWindowContents(transcriptWindow)?.send('protection:state', protectionOn)
-    console.log(`[stealth] protection ${protectionOn ? 'ON' : 'OFF'}`)
+    toggleProtection()
   })
 
   // ⌘⇧H — hide/show overlay
   globalShortcut.register(settings.hotkeys.toggleVisibility, () => {
-    if (mainWindow?.isVisible()) {
-      mainWindow.hide()
-    } else {
-      mainWindow?.show()
-    }
+    toggleTopBar()
   })
 
   // ⌘⇧Q — quit
@@ -147,16 +254,7 @@ app.whenReady().then(() => {
 
   // ⌘⇧R — toggle recording (start/stop transcription)
   globalShortcut.register('CommandOrControl+Shift+R', () => {
-    const state = sidecar.getState()
-    if (state === 'recording') {
-      finishSession()
-      console.log('[audio] stopped recording')
-    } else {
-      openTranscript()
-      setAssistantEnabled(true)
-      sidecar.startRecording()
-      console.log('[audio] started recording')
-    }
+    toggleTranscription()
   })
 })
 
@@ -165,8 +263,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  isProcessExiting = true
   globalShortcut.unregisterAll()
-  sidecar.stop({ quiet: isProcessExiting, force: isProcessExiting })
+  sidecar.stop({ quiet: true, force: true })
 })
 
 function exitFromSignal(): void {

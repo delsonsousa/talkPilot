@@ -219,9 +219,11 @@ export async function analyzeTranscript(
     return
   }
 
-  const transcript = lines
-    .map((l) => `${l.speaker === 'YOU' ? 'EU' : 'OUTRO'}: ${fixAcronyms(l.text)}`)
-    .join('\n')
+  const transcript = mode === 'suggest'
+    ? `PERGUNTA ATUAL:\n${fixAcronyms(lines.at(-1)?.text ?? '')}`
+    : lines
+      .map((l) => `${l.speaker === 'YOU' ? 'EU' : 'OUTRO'}: ${fixAcronyms(l.text)}`)
+      .join('\n')
 
   let prompt: string
   if (mode === 'summarize') {
