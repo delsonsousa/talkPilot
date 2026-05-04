@@ -10,8 +10,13 @@ import {
   setOpenSettings,
   setOpenTranscript,
   setOpenAssistant,
+  setHideAssistant,
+  setAssistantEnabled,
+  setCloseSessionWindows,
   setSuggestionWindowContents,
-  setTranscriptWindowContents
+  setTranscriptWindowContents,
+  setResizeSuggestionWindow,
+  finishSession
 } from './ipc/handlers'
 import { getSettings } from './store/settings'
 import { sidecar } from './audio/SidecarManager'
@@ -46,11 +51,16 @@ function openTranscript(): void {
   if (transcriptWindow && !transcriptWindow.isDestroyed()) {
     transcriptWindow.show()
     transcriptWindow.focus()
+    sidecar.startMonitoring()
     return
   }
 
   transcriptWindow = createTranscriptWindow()
-  transcriptWindow.on('closed', () => { transcriptWindow = null })
+  sidecar.startMonitoring()
+  transcriptWindow.on('closed', () => {
+    transcriptWindow = null
+    sidecar.stopMonitoring()
+  })
 }
 
 function openAssistant(): void {
@@ -66,6 +76,22 @@ function openAssistant(): void {
   suggestionWindow.on('closed', () => { suggestionWindow = null })
 }
 
+function hideAssistant(): void {
+  if (suggestionWindow && !suggestionWindow.isDestroyed()) suggestionWindow.hide()
+}
+
+function closeSessionWindows(): void {
+  if (suggestionWindow && !suggestionWindow.isDestroyed()) suggestionWindow.close()
+  if (transcriptWindow && !transcriptWindow.isDestroyed()) transcriptWindow.close()
+}
+
+function resizeSuggestionWindow(height: number): void {
+  if (!suggestionWindow || suggestionWindow.isDestroyed()) return
+  const current = suggestionWindow.getBounds()
+  const nextHeight = Math.round(Math.max(82, Math.min(height, 360)))
+  suggestionWindow.setBounds({ ...current, height: nextHeight }, true)
+}
+
 app.whenReady().then(() => {
   const settings = getSettings()
   protectionOn = settings.contentProtectionDefault
@@ -75,6 +101,9 @@ app.whenReady().then(() => {
   setOpenSettings(openSettings)
   setOpenTranscript(openTranscript)
   setOpenAssistant(openAssistant)
+  setHideAssistant(hideAssistant)
+  setCloseSessionWindows(closeSessionWindows)
+  setResizeSuggestionWindow(resizeSuggestionWindow)
   setMainWindowContents(() => getWindowContents(mainWindow))
   setTranscriptWindowContents(() => getWindowContents(transcriptWindow))
 
@@ -120,11 +149,11 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+R', () => {
     const state = sidecar.getState()
     if (state === 'recording') {
-      sidecar.stopRecording()
+      finishSession()
       console.log('[audio] stopped recording')
     } else {
       openTranscript()
-      openAssistant()
+      setAssistantEnabled(true)
       sidecar.startRecording()
       console.log('[audio] started recording')
     }

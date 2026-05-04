@@ -10,6 +10,7 @@ let youSpeechWorker = SpeechWorkerClient(speaker: .you)
 let othersSpeechWorker = SpeechWorkerClient(speaker: .others)
 
 var isRecording = false
+var isMonitoring = false
 var youLevel: Float = 0
 var othersLevel: Float = 0
 
@@ -32,10 +33,89 @@ func emitOnDeviceStatus() {
 
 // MARK: - Start / Stop
 
+func requestMicPermission() async -> Bool {
+    await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+        AVCaptureDevice.requestAccess(for: .audio) { granted in cont.resume(returning: granted) }
+    }
+}
+
+func wireLevelCallbacks(transcribing: Bool) {
+    mic.onBuffer = transcribing ? { youSpeechWorker.append($0) } : nil
+    mic.onLevel  = { level in youLevel = level }
+    systemAudio.onBuffer = transcribing ? { othersSpeechWorker.append($0) } : nil
+    systemAudio.onLevel  = { level in othersLevel = level }
+}
+
+func startMonitoring() async {
+    guard !isRecording else { return }
+    guard !isMonitoring else { return }
+    isMonitoring = true
+    fputs("[sidecar] startMonitoring: begin\n", stderr)
+
+    let micOK = await requestMicPermission()
+    fputs("[sidecar] monitor mic permission: \(micOK)\n", stderr)
+    guard micOK else {
+        isMonitoring = false
+        emitError(code: "PERMISSION_DENIED_MIC",
+                  "Acesse Ajustes > Privacidade > Microfone e permita TalkPilot")
+        return
+    }
+
+    wireLevelCallbacks(transcribing: false)
+
+    do {
+        try mic.start()
+        fputs("[sidecar] monitor mic started\n", stderr)
+    } catch {
+        isMonitoring = false
+        mic.stop()
+        fputs("[sidecar] monitor mic FAILED: \(error)\n", stderr)
+        emitError(code: "MIC_ERROR", error.localizedDescription)
+        return
+    }
+
+    emitStatus(.monitoring)
+    startLevelTimer()
+
+    DispatchQueue.main.async {
+        Task {
+            guard isMonitoring && !isRecording else { return }
+            do {
+                try await systemAudio.start()
+                fputs("[sidecar] monitor system audio started\n", stderr)
+            } catch {
+                fputs("[sidecar] monitor system audio failed: \(error)\n", stderr)
+                emitError(code: "SYSTEM_AUDIO_ERROR",
+                          "Audio do computador indisponivel: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    fputs("[sidecar] startMonitoring: done\n", stderr)
+}
+
+func stopMonitoring(emitReady: Bool = true) async {
+    guard isMonitoring && !isRecording else { return }
+    isMonitoring = false
+    levelTimer?.invalidate()
+    levelTimer = nil
+
+    mic.stop()
+    await systemAudio.stop()
+    mic.onBuffer = nil
+    systemAudio.onBuffer = nil
+
+    if emitReady { emitStatus(.ready) }
+    fputs("[sidecar] monitoring stopped\n", stderr)
+}
+
 func startCapture(language: String = "auto") async {
     guard !isRecording else {
         fputs("[sidecar] startCapture: already recording, ignoring\n", stderr)
         return
+    }
+    if isMonitoring {
+        await stopMonitoring(emitReady: false)
     }
     // Set flag BEFORE any suspension point to prevent concurrent calls from re-entering.
     isRecording = true
@@ -52,9 +132,7 @@ func startCapture(language: String = "auto") async {
     }
 
     // 2. Microphone permission
-    let micOK = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-        AVCaptureDevice.requestAccess(for: .audio) { granted in cont.resume(returning: granted) }
-    }
+    let micOK = await requestMicPermission()
     fputs("[sidecar] mic permission: \(micOK)\n", stderr)
     guard micOK else {
         isRecording = false
@@ -67,10 +145,7 @@ func startCapture(language: String = "auto") async {
     emitOnDeviceStatus()
 
     // Wire audio callbacks
-    mic.onBuffer = { youSpeechWorker.append($0) }
-    mic.onLevel  = { level in youLevel = level }
-    systemAudio.onBuffer = { othersSpeechWorker.append($0) }
-    systemAudio.onLevel  = { level in othersLevel = level }
+    wireLevelCallbacks(transcribing: true)
 
     youSpeechWorker.start(language: language)
     othersSpeechWorker.start(language: language)
@@ -118,6 +193,10 @@ func startCapture(language: String = "auto") async {
 }
 
 func stopCapture() async {
+    if isMonitoring && !isRecording {
+        await stopMonitoring()
+        return
+    }
     guard isRecording else { return }
     isRecording = false
     levelTimer?.invalidate()
@@ -127,6 +206,8 @@ func stopCapture() async {
     await systemAudio.stop()
     youSpeechWorker.stop()
     othersSpeechWorker.stop()
+    mic.onBuffer = nil
+    systemAudio.onBuffer = nil
 
     emitStatus(.stopped)
     fputs("[sidecar] stopped\n", stderr)
@@ -166,7 +247,29 @@ func readCommands() {
         case .stop:
             Task { await stopCapture() }
         case .ping:
-            emitStatus(isRecording ? .recording : .ready)
+            emitStatus(isRecording ? .recording : (isMonitoring ? .monitoring : .ready))
+        case .startMonitoring:
+            Task { await startMonitoring() }
+        case .stopMonitoring:
+            Task { await stopMonitoring() }
+        case .listDevices:
+            let devices = listInputDevices()
+            let selectedUID = mic.selectedDeviceUID ?? defaultInputDeviceUID()
+            emitDevicesList(devices: devices, selectedUID: selectedUID)
+        case .setDevice:
+            let uid = cmd.deviceUID
+            mic.selectedDeviceUID = uid
+            if isRecording {
+                Task {
+                    await stopCapture()
+                    await startCapture(language: "auto")
+                }
+            } else if isMonitoring {
+                Task {
+                    await stopMonitoring(emitReady: false)
+                    await startMonitoring()
+                }
+            }
         }
     }
 }

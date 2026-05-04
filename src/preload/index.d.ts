@@ -1,7 +1,7 @@
 export {}
 
 export type LLMProvider = 'gemini' | 'openai' | 'anthropic' | 'ollama'
-export type SidecarState = 'stopped' | 'ready' | 'recording' | 'error'
+export type SidecarState = 'stopped' | 'ready' | 'monitoring' | 'recording' | 'error'
 
 export interface AppSettings {
   llmProvider: LLMProvider
@@ -33,6 +33,16 @@ export interface AudioLevelsEvent {
   others: number
 }
 
+export interface AudioDevice {
+  uid: string
+  name: string
+}
+
+export interface AudioSession {
+  state: SidecarState
+  startedAt: number | null
+}
+
 declare global {
   interface Window {
     api: {
@@ -55,17 +65,31 @@ declare global {
         closeSettings: () => Promise<void>
         openTranscript: () => Promise<void>
         openAssistant: () => Promise<void>
+        minimizeCurrent: () => Promise<void>
+        resizeSuggestion: (height: number) => Promise<void>
       }
 
       audio: {
         start: () => Promise<void>
         stop: () => Promise<void>
         getStatus: () => Promise<SidecarState>
+        startMonitoring: () => Promise<void>
+        stopMonitoring: () => Promise<void>
+        getSession: () => Promise<AudioSession>
+        listDevices: () => Promise<{ devices: AudioDevice[]; selectedUID: string | null }>
+        setDevice: (uid: string | null) => Promise<void>
+        muteMic: (muted: boolean) => Promise<void>
         onTranscription: (cb: (e: TranscriptionEvent) => void) => () => void
         onLevels: (cb: (e: AudioLevelsEvent) => void) => () => void
         onStatus: (cb: (state: SidecarState) => void) => () => void
         onError: (cb: (e: { code: string; message: string }) => void) => () => void
         onModelStatus: (cb: (e: { phase: 'downloading' | 'ready' | 'failed'; reason?: string }) => void) => () => void
+      }
+
+      assistant: {
+        getEnabled: () => Promise<boolean>
+        setEnabled: (enabled: boolean) => Promise<void>
+        onState: (cb: (enabled: boolean) => void) => () => void
       }
 
       analysis: {

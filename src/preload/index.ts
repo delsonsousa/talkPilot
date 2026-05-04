@@ -25,18 +25,33 @@ const api = {
     openSettings: () => ipcRenderer.invoke('window:open-settings'),
     closeSettings: () => ipcRenderer.invoke('window:close-settings'),
     openTranscript: () => ipcRenderer.invoke('window:open-transcript'),
-    openAssistant: () => ipcRenderer.invoke('window:open-assistant')
+    openAssistant: () => ipcRenderer.invoke('window:open-assistant'),
+    minimizeCurrent: () => ipcRenderer.invoke('window:minimize-current'),
+    resizeSuggestion: (height: number) => ipcRenderer.invoke('window:resize-suggestion', height)
   },
 
   audio: {
     start: () => ipcRenderer.invoke('audio:start'),
     stop: () => ipcRenderer.invoke('audio:stop'),
     getStatus: () => ipcRenderer.invoke('audio:status'),
+    startMonitoring: () => ipcRenderer.invoke('audio:start-monitoring'),
+    stopMonitoring: () => ipcRenderer.invoke('audio:stop-monitoring'),
+    getSession: (): Promise<AudioSession> => ipcRenderer.invoke('audio:session'),
+    listDevices: (): Promise<{ devices: AudioDevice[]; selectedUID: string | null }> =>
+      ipcRenderer.invoke('audio:list-devices'),
+    setDevice: (uid: string | null) => ipcRenderer.invoke('audio:set-device', uid),
+    muteMic: (muted: boolean) => ipcRenderer.invoke('audio:mute-mic', muted),
     onTranscription: (cb: (e: TranscriptionEvent) => void) => on<TranscriptionEvent>('transcription:append', cb),
     onLevels: (cb: (e: AudioLevelsEvent) => void) => on<AudioLevelsEvent>('audio:levels', cb),
     onStatus: (cb: (state: string) => void) => on<string>('audio:status', cb),
     onError: (cb: (e: { code: string; message: string }) => void) => on('audio:error', cb),
     onModelStatus: (cb: (e: { phase: string; reason?: string }) => void) => on('audio:model-status', cb)
+  },
+
+  assistant: {
+    getEnabled: (): Promise<boolean> => ipcRenderer.invoke('assistant:get-enabled'),
+    setEnabled: (enabled: boolean) => ipcRenderer.invoke('assistant:set-enabled', enabled),
+    onState: (cb: (enabled: boolean) => void) => on<boolean>('assistant:state', cb)
   },
 
   analysis: {
@@ -60,6 +75,11 @@ contextBridge.exposeInMainWorld('api', api)
 console.log('[preload] window.api exposed:', Object.keys(api))
 
 // Type re-exports consumed by index.d.ts
+interface AudioDevice {
+  uid: string
+  name: string
+}
+
 interface TranscriptionEvent {
   speaker: 'YOU' | 'OTHERS'
   text: string
@@ -70,4 +90,9 @@ interface TranscriptionEvent {
 interface AudioLevelsEvent {
   you: number
   others: number
+}
+
+interface AudioSession {
+  state: 'stopped' | 'ready' | 'monitoring' | 'recording' | 'error'
+  startedAt: number | null
 }

@@ -30,7 +30,7 @@ struct AudioLevelsMessage: Codable {
 }
 
 enum SidecarState: String, Codable {
-    case ready, recording, stopped
+    case ready, monitoring, recording, stopped
 }
 
 struct StatusMessage: Codable {
@@ -66,15 +66,41 @@ struct ModelStatusMessage: Codable {
     }
 }
 
+// MARK: - Audio device list (sidecar → Electron via stdout)
+
+struct AudioDevice: Codable {
+    let uid: String
+    let name: String
+}
+
+struct DevicesListMessage: Codable {
+    let type = "devices_list"
+    let devices: [AudioDevice]
+    let selectedUID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case type, devices, selectedUID
+    }
+}
+
+func emitDevicesList(devices: [AudioDevice], selectedUID: String?) {
+    emit(DevicesListMessage(devices: devices, selectedUID: selectedUID))
+}
+
 // MARK: - Inbound (Electron → sidecar via stdin)
 
 enum InboundCommand: String, Codable {
     case start, stop, ping
+    case startMonitoring = "start_monitoring"
+    case stopMonitoring  = "stop_monitoring"
+    case listDevices = "list_devices"
+    case setDevice   = "set_device"
 }
 
 struct CommandMessage: Codable {
     let command: InboundCommand
     let language: String?
+    let deviceUID: String?
 }
 
 // MARK: - I/O helpers

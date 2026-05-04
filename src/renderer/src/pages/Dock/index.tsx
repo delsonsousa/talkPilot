@@ -1,29 +1,53 @@
 import { useEffect, useState } from 'react'
-import { GripVertical, Home, Mic, Square } from 'lucide-react'
-import type { SidecarState } from '../../../../preload/index.d'
+import { FileText, GripVertical, Home, Mic, Square } from 'lucide-react'
+import type { AudioSession, SidecarState } from '../../../../preload/index.d'
 
 export default function DockPage(): JSX.Element {
   const [audioState, setAudioState] = useState<SidecarState>('stopped')
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const isRecording = audioState === 'recording'
 
   useEffect(() => {
     document.body.classList.add('overlay')
-    window.api.audio.getStatus().then(setAudioState)
-    const unsub = window.api.audio.onStatus(setAudioState)
+    window.api.audio.getSession().then(applySession)
+    const unsub = window.api.audio.onStatus(() => {
+      window.api.audio.getSession().then(applySession)
+    })
     return () => {
       document.body.classList.remove('overlay')
       unsub()
     }
   }, [])
 
+  useEffect(() => {
+    if (!recordingStartedAt) {
+      setElapsedSeconds(0)
+      return
+    }
+
+    const tick = (): void => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - recordingStartedAt) / 1000)))
+    }
+    tick()
+    const timer = window.setInterval(tick, 1000)
+    return () => window.clearInterval(timer)
+  }, [recordingStartedAt])
+
+  function applySession(session: AudioSession): void {
+    setAudioState(session.state)
+    setRecordingStartedAt(session.state === 'recording' ? session.startedAt ?? Date.now() : null)
+  }
+
   async function toggleListening(): Promise<void> {
     if (isRecording) {
+      if (!window.confirm('Deseja finalizar a transcrição? O cronômetro será zerado.')) return
       await window.api.audio.stop()
       return
     }
 
     await window.api.window.openTranscript()
-    await window.api.window.openAssistant()
+    await window.api.assistant.setEnabled(true)
     await window.api.audio.start()
   }
 
@@ -39,21 +63,35 @@ export default function DockPage(): JSX.Element {
             <Home size={17} />
           </button>
 
+          <button
+            onClick={() => window.api.window.openTranscript()}
+            title="Abrir transcrição"
+            className="no-drag grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/[0.1] hover:text-white"
+          >
+            <FileText size={16} />
+          </button>
+
           <div className="h-6 w-px bg-white/[0.1]" />
 
           <button
             onClick={toggleListening}
             title={isRecording ? 'Parar' : 'Começar a ouvir'}
-            className={`no-drag grid h-9 w-12 place-items-center rounded-[12px] transition ${
+            className={`no-drag flex h-9 min-w-[78px] items-center justify-center gap-1.5 rounded-[12px] px-3 text-[12px] font-medium tabular-nums transition ${
               isRecording
                 ? 'border border-red-400/50 bg-red-500/[0.12] text-red-100 hover:bg-red-500/[0.18]'
                 : 'border border-blue-300/40 bg-blue-500 text-white hover:bg-blue-400'
             }`}
           >
-            {isRecording ? <Square size={16} /> : <Mic size={17} />}
+            {isRecording ? <><Square size={14} />{formatElapsed(elapsedSeconds)}</> : <Mic size={17} />}
           </button>
         </div>
       </div>
     </div>
   )
+}
+
+function formatElapsed(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }

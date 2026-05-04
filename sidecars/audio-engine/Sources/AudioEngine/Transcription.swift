@@ -64,6 +64,7 @@ class Transcriber {
 
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults = true
+        req.addsPunctuation = true
         req.contextualStrings = Self.contextualStrings
         // On-device allows two concurrent sessions (mic + system audio).
         // Server-based only allows one at a time — still start both and let Apple
@@ -323,12 +324,40 @@ class Transcriber {
         "Next JS",
         "JavaScript",
         "TypeScript",
+        "Node.js",
+        "Vercel",
+        "Webpack",
+        "Turbopack",
+        "SSG",
+        "SSR",
+        "ISR",
+        "CSR",
+        "RSC",
+        "API Routes",
+        "getStaticProps",
+        "getServerSideProps",
+        "getStaticPaths",
         "frontend",
+        "backend",
         "mobile app",
         "framework",
         "library",
         "biblioteca",
-        "aplicativo mobile"
+        "aplicativo mobile",
+        "renderização",
+        "servidor",
+        "cliente",
+        "Python",
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "PostgreSQL",
+        "MongoDB",
+        "GraphQL",
+        "REST API",
+        "webhook",
+        "deploy",
+        "deployment"
     ]
 
     private static func recognize(buffers: [AVAudioPCMBuffer], localeIdentifier: String) async -> RecognitionCandidate? {
@@ -354,6 +383,7 @@ class Transcriber {
 
             let req = SFSpeechAudioBufferRecognitionRequest()
             req.shouldReportPartialResults = true
+            req.addsPunctuation = true
             req.contextualStrings = contextualStrings
             req.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
 

@@ -187,6 +187,24 @@ Formato obrigatorio:
 - Sem introducao, sem detalhes secundarios e sem repetir a transcricao.`
 }
 
+const acrFixes: Array<[RegExp, string]> = [
+  // Compound garbles first (longer patterns before shorter subsets)
+  [/\bSSGSSI\b/gi,    'SSG, SSR'],
+  [/\bSSGSS\b/gi,     'SSG, SSR'],
+  [/\bSSIIURRS?\b/gi, 'SSR, ISR'],
+  [/\bSSIURRS?\b/gi,  'SSR, ISR'],
+  [/\bSSIIURS?\b/gi,  'SSR, ISR'],
+  [/\bSSG\s+SS\b/gi,  'SSG, SSR'],
+  // Single-term garbles
+  [/\bSSII\b/gi,      'SSR'],
+  [/\bIURRS?\b/gi,    'ISR'],
+  [/\bURS\b/g,        'ISR'],   // all-caps URS only — ISR misheard in PT
+]
+
+function fixAcronyms(text: string): string {
+  return acrFixes.reduce((t, [pat, rep]) => t.replace(pat, rep), text)
+}
+
 export async function analyzeTranscript(
   lines: AnalysisLine[],
   signal: AbortSignal,
@@ -202,7 +220,7 @@ export async function analyzeTranscript(
   }
 
   const transcript = lines
-    .map((l) => `${l.speaker === 'YOU' ? 'EU' : 'OUTRO'}: ${l.text}`)
+    .map((l) => `${l.speaker === 'YOU' ? 'EU' : 'OUTRO'}: ${fixAcronyms(l.text)}`)
     .join('\n')
 
   let prompt: string
@@ -215,7 +233,7 @@ export async function analyzeTranscript(
     prompt = `${instruction}\n\n${profile.buildPrompt(transcript)}\n\n${instruction}`
   }
 
-  const maxTokens = mode === 'summarize' ? 360 : 180
+  const maxTokens = mode === 'summarize' ? 360 : 130
 
   try {
     const result = await streamText({ model, prompt, maxOutputTokens: maxTokens, abortSignal: signal })

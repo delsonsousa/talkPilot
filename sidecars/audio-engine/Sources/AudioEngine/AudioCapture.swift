@@ -2,6 +2,8 @@ import Foundation
 import AVFoundation
 import ScreenCaptureKit
 import CoreGraphics
+import CoreAudio
+import AudioToolbox
 
 enum AudioCaptureError: LocalizedError {
     case screenRecordingPermissionDenied
@@ -23,11 +25,70 @@ enum AudioCaptureError: LocalizedError {
     }
 }
 
+// MARK: - Audio device enumeration
+
+func listInputDevices() -> [AudioDevice] {
+    let session = AVCaptureDevice.DiscoverySession(
+        deviceTypes: [.microphone],
+        mediaType: .audio,
+        position: .unspecified
+    )
+    return session.devices.map { AudioDevice(uid: $0.uniqueID, name: $0.localizedName) }
+}
+
+func defaultInputDeviceUID() -> String? {
+    var deviceID = AudioDeviceID(0)
+    var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+    var addr = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDefaultInputDevice,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    guard AudioObjectGetPropertyData(
+        AudioObjectID(kAudioObjectSystemObject),
+        &addr, 0, nil, &size, &deviceID
+    ) == noErr, deviceID != 0 else { return nil }
+    return uidForDevice(deviceID)
+}
+
+private func uidForDevice(_ deviceID: AudioDeviceID) -> String? {
+    var uid: Unmanaged<CFString>? = nil
+    var uidSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+    var uidAddr = AudioObjectPropertyAddress(
+        mSelector: kAudioDevicePropertyDeviceUID,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    guard AudioObjectGetPropertyData(deviceID, &uidAddr, 0, nil, &uidSize, &uid) == noErr,
+          let uid else { return nil }
+    return uid.takeRetainedValue() as String
+}
+
+// Enumerate all CoreAudio devices and find the one matching the given UID.
+// This avoids passing a CFString as a CoreAudio qualifier (unsafe in Swift).
+private func deviceID(forUID uid: String) -> AudioDeviceID? {
+    var addr = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDevices,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    var size: UInt32 = 0
+    AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size)
+    let count = Int(size) / MemoryLayout<AudioDeviceID>.size
+    guard count > 0 else { return nil }
+
+    var deviceIDs = [AudioDeviceID](repeating: 0, count: count)
+    AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &deviceIDs)
+
+    return deviceIDs.first { uidForDevice($0) == uid }
+}
+
 // MARK: - Mic capture (YOU)
 
 class MicCapture {
     private let engine = AVAudioEngine()
     private var levelTimer: Timer?
+    var selectedDeviceUID: String?
     var onBuffer: ((AVAudioPCMBuffer) -> Void)?
     var onLevel: ((Float) -> Void)?
 
@@ -51,6 +112,9 @@ class MicCapture {
             }
         }
 
+        // prepare() initialises the inputNode's audioUnit so we can set the device before start()
+        engine.prepare()
+        applySelectedDevice()
         try engine.start()
     }
 
@@ -58,6 +122,28 @@ class MicCapture {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         levelTimer?.invalidate()
+    }
+
+    private func applySelectedDevice() {
+        guard let uid = selectedDeviceUID,
+              let targetID = deviceID(forUID: uid),
+              let audioUnit = engine.inputNode.audioUnit
+        else { return }
+
+        var devID = targetID
+        let status = AudioUnitSetProperty(
+            audioUnit,
+            AudioUnitPropertyID(kAudioOutputUnitProperty_CurrentDevice),
+            AudioUnitScope(kAudioUnitScope_Global),
+            0,
+            &devID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        if status != noErr {
+            fputs("[mic] failed to set device \(uid): \(status)\n", stderr)
+        } else {
+            fputs("[mic] device set to \(uid)\n", stderr)
+        }
     }
 }
 

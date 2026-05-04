@@ -10,6 +10,9 @@ import type { LLMProvider } from '../store/settings'
 let openSettingsFn: (() => void) | null = null
 let openTranscriptFn: (() => void) | null = null
 let openAssistantFn: (() => void) | null = null
+let hideAssistantFn: (() => void) | null = null
+let closeSessionWindowsFn: (() => void) | null = null
+let resizeSuggestionWindowFn: ((height: number) => void) | null = null
 let settingsWindowRef: (() => BrowserWindow | null) | null = null
 let mainWindowContents: (() => WebContents | null) | null = null
 let transcriptWindowContents: (() => WebContents | null) | null = null
@@ -18,6 +21,9 @@ let suggestionWindowContents: (() => WebContents | null) | null = null
 export function setOpenSettings(fn: () => void): void { openSettingsFn = fn }
 export function setOpenTranscript(fn: () => void): void { openTranscriptFn = fn }
 export function setOpenAssistant(fn: () => void): void { openAssistantFn = fn }
+export function setHideAssistant(fn: () => void): void { hideAssistantFn = fn }
+export function setCloseSessionWindows(fn: () => void): void { closeSessionWindowsFn = fn }
+export function setResizeSuggestionWindow(fn: (height: number) => void): void { resizeSuggestionWindowFn = fn }
 export function setSettingsWindowRef(getter: () => BrowserWindow | null): void { settingsWindowRef = getter }
 export function setMainWindowContents(getter: () => WebContents | null): void { mainWindowContents = getter }
 export function setTranscriptWindowContents(getter: () => WebContents | null): void { transcriptWindowContents = getter }
@@ -40,6 +46,9 @@ function sendAudioWindow(channel: string, ...args: unknown[]): void {
 // ── Analysis state ─────────────────────────────────────────────────────────────
 
 let analysisController: AbortController | null = null
+let assistantEnabled = false
+let recordingStartedAt: number | null = null
+let isFinishingSession = false
 
 // ── Auto-trigger state ─────────────────────────────────────────────────────────
 
@@ -47,6 +56,7 @@ let autoBuffer: AnalysisLine[] = []
 let autoDebounce: ReturnType<typeof setTimeout> | null = null
 const AUTO_DEBOUNCE_MS = 1800
 const AUTO_MIN_LINES   = 1
+const AUTO_CONTEXT_LINES = 1
 
 function looksLikeQuestion(text: string): boolean {
   const normalized = text.trim().toLowerCase()
@@ -56,6 +66,7 @@ function looksLikeQuestion(text: string): boolean {
 }
 
 function scheduleAutoAnalysis(immediate = false): void {
+  if (!assistantEnabled) return
   if (autoDebounce) clearTimeout(autoDebounce)
   if (autoBuffer.length < AUTO_MIN_LINES) return
   if (immediate) {
@@ -66,6 +77,7 @@ function scheduleAutoAnalysis(immediate = false): void {
 }
 
 async function runAutoAnalysis(): Promise<void> {
+  if (!assistantEnabled) return
   if (autoDebounce) {
     clearTimeout(autoDebounce)
     autoDebounce = null
@@ -81,14 +93,51 @@ async function runAutoAnalysis(): Promise<void> {
 
   wc.send('suggestion:clear')
 
+  const linesForAnswer = autoBuffer.slice(-AUTO_CONTEXT_LINES)
+
   await analyzeTranscript(
-    [...autoBuffer],
+    linesForAnswer,
     signal,
     (chunk) => { if (!wc.isDestroyed()) wc.send('suggestion:chunk', chunk) },
     ()      => { if (!wc.isDestroyed()) wc.send('suggestion:done') },
     (err)   => { if (!wc.isDestroyed()) wc.send('suggestion:error', err) },
     'suggest'
   )
+}
+
+export function setAssistantEnabled(enabled: boolean): void {
+  assistantEnabled = enabled
+
+  if (!enabled) {
+    if (autoDebounce) {
+      clearTimeout(autoDebounce)
+      autoDebounce = null
+    }
+    analysisController?.abort()
+    analysisController = null
+    hideAssistantFn?.()
+  } else {
+    openAssistantFn?.()
+  }
+
+  sendAudioWindow('assistant:state', assistantEnabled)
+}
+
+export function finishSession(): void {
+  isFinishingSession = true
+  if (autoDebounce) {
+    clearTimeout(autoDebounce)
+    autoDebounce = null
+  }
+  autoBuffer = []
+  analysisController?.abort()
+  analysisController = null
+  recordingStartedAt = null
+  assistantEnabled = false
+  sendAudioWindow('assistant:state', false)
+  closeSessionWindowsFn?.()
+  sidecar.stopRecording()
+  sidecar.stopMonitoring()
 }
 
 // ── IPC Handlers ───────────────────────────────────────────────────────────────
@@ -115,7 +164,15 @@ export function registerIpcHandlers(): void {
   // ── Window ────────────────────────────────────────────────
   ipcMain.handle('window:open-settings', () => { openSettingsFn?.() })
   ipcMain.handle('window:open-transcript', () => { openTranscriptFn?.() })
-  ipcMain.handle('window:open-assistant', () => { openAssistantFn?.() })
+  ipcMain.handle('window:open-assistant', () => { setAssistantEnabled(true) })
+  ipcMain.handle('window:minimize-current', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) win.hide()
+    sidecar.stopMonitoring()
+  })
+  ipcMain.handle('window:resize-suggestion', (_event, height: number) => {
+    resizeSuggestionWindowFn?.(height)
+  })
 
   ipcMain.handle('window:close-settings', () => {
     const win = settingsWindowRef?.()
@@ -123,30 +180,69 @@ export function registerIpcHandlers(): void {
   })
 
   // ── Audio / Sidecar ───────────────────────────────────────
-  ipcMain.handle('audio:start', () => { sidecar.startRecording(getSettings().language || 'auto') })
-  ipcMain.handle('audio:stop', () => { sidecar.stopRecording() })
+  ipcMain.handle('audio:start', () => {
+    if (sidecar.getState() !== 'recording') recordingStartedAt = Date.now()
+    sidecar.startRecording(getSettings().language || 'auto')
+  })
+  ipcMain.handle('audio:stop', () => { finishSession() })
   ipcMain.handle('audio:status', () => sidecar.getState())
+  ipcMain.handle('audio:start-monitoring', () => { sidecar.startMonitoring() })
+  ipcMain.handle('audio:stop-monitoring', () => { sidecar.stopMonitoring() })
+  ipcMain.handle('audio:session', () => ({
+    state: sidecar.getState(),
+    startedAt: recordingStartedAt
+  }))
 
-  // Forward sidecar events → renderer
+  ipcMain.handle('assistant:get-enabled', () => assistantEnabled)
+  ipcMain.handle('assistant:set-enabled', (_event, enabled: boolean) => {
+    setAssistantEnabled(Boolean(enabled))
+  })
+
+  ipcMain.handle('audio:list-devices', () => {
+    return new Promise<{ devices: unknown[]; selectedUID: string | null }>((resolve) => {
+      const timeout = setTimeout(() => resolve({ devices: [], selectedUID: null }), 2000)
+      sidecar.once('devices', (payload) => {
+        clearTimeout(timeout)
+        resolve(payload)
+      })
+      sidecar.listDevices()
+    })
+  })
+
+  ipcMain.handle('audio:set-device', (_e, uid: string | null) => {
+    sidecar.setDevice(uid)
+  })
+
+  let isMicMuted = false
+  ipcMain.handle('audio:mute-mic', (_e, muted: boolean) => {
+    isMicMuted = muted
+  })
+
   sidecar.on('transcription', (event) => {
+    if (isMicMuted && event.speaker === 'YOU') return
     sendIfAlive(getTranscriptContents(), 'transcription:append', event)
 
-    // Feed auto-analysis buffer with final lines only
-    if (event.isFinal) {
+    if (assistantEnabled && event.isFinal) {
       autoBuffer.push({ speaker: event.speaker, text: event.text })
-      if (autoBuffer.length > 30) autoBuffer = autoBuffer.slice(-30)
+      if (autoBuffer.length > 6) autoBuffer = autoBuffer.slice(-6)
       scheduleAutoAnalysis(looksLikeQuestion(event.text))
     }
   })
 
+  // sidecar transcription → renderer (with mute gate above)
+
   sidecar.on('levels', (event) => { sendIfAlive(getTranscriptContents(), 'audio:levels', event) })
 
   sidecar.on('status', (state) => {
+    if (state === 'recording' && recordingStartedAt === null) recordingStartedAt = Date.now()
+    if (state !== 'recording') recordingStartedAt = null
     sendAudioWindow('audio:status', state)
     if (state === 'stopped') {
       // Clear auto-trigger when recording stops
       if (autoDebounce) clearTimeout(autoDebounce)
       autoBuffer = []
+      if (!isFinishingSession && getTranscriptContents()) sidecar.startMonitoring()
+      isFinishingSession = false
     }
   })
 
@@ -157,6 +253,7 @@ export function registerIpcHandlers(): void {
   // ── LLM Analysis (manual, e.g. Resumir) ───────────────────
   // Results go to the suggestion window, not the overlay
   ipcMain.handle('analysis:start', async (_event, lines: AnalysisLine[], mode: AnalysisMode = 'suggest') => {
+    if (!assistantEnabled) return
     if (autoDebounce) clearTimeout(autoDebounce) // cancel pending auto-trigger
 
     analysisController?.abort()

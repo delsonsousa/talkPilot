@@ -4,7 +4,7 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { app } from 'electron'
 
-export type SidecarState = 'stopped' | 'ready' | 'recording' | 'error'
+export type SidecarState = 'stopped' | 'ready' | 'monitoring' | 'recording' | 'error'
 
 export interface TranscriptionEvent {
   speaker: 'YOU' | 'OTHERS'
@@ -25,12 +25,18 @@ export interface ModelStatusEvent {
   reason?: string
 }
 
+export interface AudioDevice {
+  uid: string
+  name: string
+}
+
 type SidecarEvents = {
   transcription: [TranscriptionEvent]
   levels: [AudioLevelsEvent]
   status: [SidecarState]
   error: [{ code: string; message: string }]
   modelStatus: [ModelStatusEvent]
+  devices: [{ devices: AudioDevice[]; selectedUID: string | null }]
 }
 
 export class SidecarManager extends EventEmitter {
@@ -146,8 +152,27 @@ export class SidecarManager extends EventEmitter {
     this.sendCommand('stop')
   }
 
+  startMonitoring(): void {
+    if (!this.process) this.start()
+    if (this.state === 'recording' || this.state === 'monitoring') return
+    setTimeout(() => this.sendCommand('start_monitoring'), 100)
+  }
+
+  stopMonitoring(): void {
+    if (this.state !== 'monitoring') return
+    this.sendCommand('stop_monitoring')
+  }
+
   ping(): void {
     this.sendCommand('ping')
+  }
+
+  listDevices(): void {
+    this.sendCommand('list_devices')
+  }
+
+  setDevice(uid: string | null): void {
+    this.sendCommand('set_device', uid ? { deviceUID: uid } : {})
   }
 
   getState(): SidecarState {
@@ -186,6 +211,9 @@ export class SidecarManager extends EventEmitter {
       case 'model_status':
         console.log('[audio] model status:', msg.phase)
         this.emit('modelStatus', { phase: msg.phase, reason: msg.reason })
+        break
+      case 'devices_list':
+        this.emit('devices', { devices: msg.devices, selectedUID: msg.selectedUID ?? null })
         break
     }
   }

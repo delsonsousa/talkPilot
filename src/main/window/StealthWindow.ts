@@ -5,9 +5,9 @@ export function createStealthWindow(): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
 
   const win = new BrowserWindow({
-    width: 190,
+    width: 260,
     height: 74,
-    x: Math.round((width - 190) / 2),
+    x: Math.round((width - 260) / 2),
     y: height - 98,
     show: false,
     frame: false,
