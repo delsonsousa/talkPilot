@@ -1,0 +1,66 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "AudioEngine-arm64-apple-macosx-release.exe": ["<AudioEngine-arm64-apple-macosx-release.exe>"]
+  "AudioEngine-arm64-apple-macosx-release.module": ["<AudioEngine-arm64-apple-macosx-release.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<AudioEngine-arm64-apple-macosx-release.exe>","<AudioEngine-arm64-apple-macosx-release.module>"]
+  "test": ["<AudioEngine-arm64-apple-macosx-release.exe>","<AudioEngine-arm64-apple-macosx-release.module>"]
+default: "main"
+nodes:
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/AudioCapture.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/Protocol.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/SpeechWorker.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/Transcription.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/main.swift"]
+    outputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/sources"]
+    description: "Write auxiliary file /Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/sources"
+
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.swift.o"]
+    outputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.product/Objects.LinkFileList"
+
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+
+  "<AudioEngine-arm64-apple-macosx-release.exe>":
+    tool: phony
+    inputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine"]
+    outputs: ["<AudioEngine-arm64-apple-macosx-release.exe>"]
+
+  "<AudioEngine-arm64-apple-macosx-release.module>":
+    tool: phony
+    inputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/Modules/AudioEngine.swiftmodule"]
+    outputs: ["<AudioEngine-arm64-apple-macosx-release.module>"]
+
+  "C.AudioEngine-arm64-apple-macosx-release.exe":
+    tool: shell
+    inputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.product/Objects.LinkFileList"]
+    outputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine"]
+    description: "Linking ./.build/arm64-apple-macosx/release/AudioEngine"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release","-o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine","-module-name","AudioEngine","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-dead_strip","-Xlinker","-alias","-Xlinker","_AudioEngine_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-framework","AVFoundation","-framework","Speech","-framework","ScreenCaptureKit","-framework","CoreGraphics","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.AudioEngine-arm64-apple-macosx-release.module":
+    tool: shell
+    inputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/AudioCapture.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/Protocol.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/SpeechWorker.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/Transcription.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/main.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/sources"]
+    outputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.swift.o","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/Modules/AudioEngine.swiftmodule"]
+    description: "Compiling Swift Module 'AudioEngine' (5 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","AudioEngine","-emit-dependencies","-emit-module","-emit-module-path","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/Modules/AudioEngine.swiftmodule","-output-file-map","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/output-file-map.json","-whole-module-optimization","-num-threads","12","-c","@/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/sources","-I","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/Modules","-target","arm64-apple-macosx14.0","-whole-module-optimization","-num-threads","12","-serialize-diagnostics","-O","-j12","-DSWIFT_PACKAGE","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","AudioEngine_main","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","audio_engine"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Package.swift","/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

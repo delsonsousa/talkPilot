@@ -1,0 +1,37 @@
+{
+  "": {
+    "dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioEngine.d",
+    "object": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioEngine.o",
+    "swift-dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/primary.swiftdeps"
+  },
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/AudioCapture.swift": {
+    "object": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.swift.o",
+    "swiftmodule": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture~partial.swiftmodule",
+    "swift-dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.swiftdeps",
+    "diagnostics": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/AudioCapture.dia"
+  },
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/Protocol.swift": {
+    "object": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.swift.o",
+    "swiftmodule": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol~partial.swiftmodule",
+    "swift-dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.swiftdeps",
+    "diagnostics": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Protocol.dia"
+  },
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/SpeechWorker.swift": {
+    "object": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.swift.o",
+    "swiftmodule": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker~partial.swiftmodule",
+    "swift-dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.swiftdeps",
+    "diagnostics": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/SpeechWorker.dia"
+  },
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/Transcription.swift": {
+    "object": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.swift.o",
+    "swiftmodule": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription~partial.swiftmodule",
+    "swift-dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.swiftdeps",
+    "diagnostics": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/Transcription.dia"
+  },
+  "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/Sources/AudioEngine/main.swift": {
+    "object": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.swift.o",
+    "swiftmodule": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.swiftdeps",
+    "diagnostics": "/Users/delsonsousa/Documents/Projects/talkPilot/sidecars/audio-engine/.build/arm64-apple-macosx/release/AudioEngine.build/main.dia"
+  }
+}
