@@ -18,7 +18,9 @@ const conciseRules = `Regras de resposta:
 - Comece pela resposta principal; detalhe so se agregar valor.
 - Use bullets somente se houver varios pontos claros; no maximo 2 bullets.
 - Cada bullet deve ter no maximo 16 palavras.
-- Nao invente empresa, numeros, cargos ou experiencias que nao aparecem na transcricao.
+- Nao invente empresa, numeros, cargos ou experiencias que nao aparecem na transcricao ou na fonte local do CV.
+- Pode complementar conceitos tecnicos com conhecimento geral de engenharia, desde que nao apresente isso como experiencia vivida se nao estiver na fonte local do CV.
+- Nao despeje curriculo. Use no maximo 1 exemplo real e transforme em fala natural.
 - Nunca invente expansoes de siglas. Para siglas conhecidas, use apenas o glossario abaixo.
 - Se a pergunta comparar SSG, SSR ou ISR, defina cada uma exatamente pelo glossario.
 - Glossario obrigatorio — use SEMPRE estas definicoes ao ver estas siglas:
@@ -74,7 +76,9 @@ Response rules:
 - Start with the main answer; add detail only if it helps.
 - Use bullets only for multiple clear points; maximum 2 bullets.
 - Each bullet must be 16 words or fewer.
-- Do not invent companies, numbers, titles, or experience not present in the transcript.
+- Do not invent companies, numbers, titles, or experience not present in the transcript or local CV source.
+- You may complement technical concepts with general engineering knowledge, but do not present it as lived experience unless it is in the local CV source.
+- Do not dump resume content. Use at most 1 real example and turn it into natural spoken interview language.
 - Never invent acronym expansions. For known acronyms, use only this glossary:
   SSG = Static Site Generation
   SSR = Server-Side Rendering
@@ -115,7 +119,9 @@ Response rules:
 - Be precise and practical: approach first, complexity only when useful.
 - Prefer one short paragraph or up to 2 bullets.
 - Each bullet must be 16 words or fewer.
-- Do not invent details not present in the transcript.
+- Do not invent details not present in the transcript or local CV source.
+- You may complement technical concepts with general engineering knowledge, but do not present it as lived experience unless it is in the local CV source.
+- Do not dump resume content. Use at most 1 real example and turn it into natural spoken interview language.
 - Never invent acronym expansions. For known acronyms, use only this glossary:
   SSG = Static Site Generation
   SSR = Server-Side Rendering

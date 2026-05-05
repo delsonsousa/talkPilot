@@ -58,7 +58,7 @@ let isFinishingSession = false
 
 let autoBuffer: AnalysisLine[] = []
 let autoDebounce: ReturnType<typeof setTimeout> | null = null
-const AUTO_DEBOUNCE_MS = 1800
+const AUTO_DEBOUNCE_MS = 900
 const AUTO_MIN_LINES   = 1
 const AUTO_CONTEXT_LINES = 1
 
@@ -66,7 +66,7 @@ function looksLikeQuestion(text: string): boolean {
   const normalized = text.trim().toLowerCase()
   if (!normalized) return false
   if (/[?？]$/.test(normalized)) return true
-  return /^(o que|qual|quais|quando|como|por que|porque|onde|quem|me fala|me explique|explica|pode me|voce pode|você pode|could you|can you|what|why|how|when|where|who)\b/.test(normalized)
+  return /^(o que|qual|quais|quando|como|por que|porque|onde|quem|me fala|fala sobre|me conta|conte sobre|me explique|explica|explique|pode me|voce pode|você pode|voce ja|você já|tem experiencia|tem experiência|could you|can you|tell me|describe|have you|what|why|how|when|where|who)\b/.test(normalized)
 }
 
 function scheduleAutoAnalysis(immediate = false): void {

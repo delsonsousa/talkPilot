@@ -5,6 +5,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { getSettings } from '../store/settings'
 import { getApiKey } from '../store/secrets'
 import { getProfile } from '../profiles/PromptProfiles'
+import { CANDIDATE_PERSONA, buildCandidateKnowledgeContext } from '../knowledge/CandidateKnowledge'
 
 export interface AnalysisLine {
   speaker: 'YOU' | 'OTHERS'
@@ -232,10 +233,21 @@ export async function analyzeTranscript(
     const settings = getSettings()
     const profile = getProfile(settings.activeProfile)
     const instruction = languageInstruction(detectConversationLanguage(lines))
-    prompt = `${instruction}\n\n${profile.buildPrompt(transcript)}\n\n${instruction}`
+    const candidateKnowledge = buildCandidateKnowledgeContext(transcript)
+    const knowledgeInstruction = candidateKnowledge
+      ? `Use a experiencia do candidato como base factual e complemente com conhecimento tecnico geral quando isso melhorar a resposta. Nao invente experiencia; use conhecimento geral apenas para explicar conceitos, trade-offs e boas praticas. Responda como fala natural de entrevista, nao como resumo de curriculo.`
+      : ''
+    prompt = [
+      instruction,
+      CANDIDATE_PERSONA,
+      knowledgeInstruction,
+      candidateKnowledge,
+      profile.buildPrompt(transcript),
+      instruction
+    ].filter(Boolean).join('\n\n')
   }
 
-  const maxTokens = mode === 'summarize' ? 360 : 130
+  const maxTokens = mode === 'summarize' ? 360 : 190
 
   try {
     const result = await streamText({ model, prompt, maxOutputTokens: maxTokens, abortSignal: signal })
